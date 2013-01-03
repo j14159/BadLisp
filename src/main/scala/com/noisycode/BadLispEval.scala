@@ -1,21 +1,52 @@
 package com.noisycode
 
+trait Evaluator {
+  type pf = PartialFunction[List[Term], Term]
+  
+  var bindings: Map[String, Term] = Map()
+  var symbolTable: List[PartialFunction[List[Term], Term]] = Nil
+
+  def eval(t: List[Term]): Term
+
+  def eval(lt: ListTerm): Term = lt match {
+    case SExp(s) => eval(s)
+    case Data(d) => Data(d)
+  }
+
+  def resolveTerm(t: Term): Value = {
+    t match {
+      case v: Value => v
+      case Id(id) => bindings(id) match {
+	case Number(n) => Number(n)
+	case Data(d) => Data(d)
+	case other => Error("Not a value binding:  " + other.toString)
+      }
+      case SExp(s) => eval(s) match {
+	case v: Value => v
+	case other => Error("Could not resolve SExp to number:  " + s.toString)
+      }
+      case Data(d) => Data(d)
+    }
+  }
+}
+
 class BadLispEval(initialBindings: Map[String, Term] = Map(), initialSymbols: List[PartialFunction[List[Term], Term]] = Nil)
-  extends TypeHelper 
-  with Bindings 
+  extends Evaluator
   with PredefMath 
   with Definitions 
   with Comparisons 
-  with Conditionals {
+  with Conditionals 
+  with BadLists {
 
-  bindings = initialBindings;
+  bindings = initialBindings
+  symbolTable = initialSymbols
 
   var bifs = 
-    List[pf](add, sub, div, mult, constant, function, gt, lt, eq, basicIfThenElse)
-
-  var symbolTable = initialSymbols
-
-  def eval(s: SExp): Term = eval(s.terms)
+    List[pf](add, sub, div, mult, 
+	     constant, function, 
+	     gt, lt, eq, 
+	     basicIfThenElse,
+	     cons, car, cdr)
 
   def eval(t: List[Term]): Term = {
     t match {
@@ -41,19 +72,8 @@ class BadLispEval(initialBindings: Map[String, Term] = Map(), initialSymbols: Li
   }
 }
 
-trait TypeHelper {
-  type pf = PartialFunction[List[Term], Term]
-}
-
-trait Bindings {
-  var bindings: Map[String, Term] = Map()
-}
-
 trait PredefMath {
-  this: TypeHelper with Bindings =>
-
-  def eval(s: SExp): Term
-  def eval(t: List[Term]): Term
+  this: Evaluator =>
 
   val add: pf =
     { case (Id("+") :: rest) => doMath(rest, ((a, b) => Number(a.v + b.v))) }
@@ -66,38 +86,15 @@ trait PredefMath {
 
   def doMath(t: List[Term], m: (Number, Number) => Number): Term = {
     t match {
-      case (Number(v) :: rest) => rest match {
-        case List() => Number(v)
-        case _ => doMath(rest, m) match {
-          case Number(result) => m(Number(v), Number(result))
-          case error => error
-        }
+      case List(Number(n)) => Number(n)
+      case (Number(n) :: rest) => doMath(rest, m) match {
+	case Number(x) => m(Number(n), Number(x))
+	case error => error
       }
-      case (SExp(s) :: rest) => rest match {
-        case List() => eval(s)
-        case _ => doMath(rest, m) match {
-          case Number(backResult) => eval(s) match {
-            case Number(frontResult) => m(Number(frontResult), Number(backResult))
-            case _ => Error("SExp did not result in a number:  " + s.toString)
-          }
-        }
-      }
-      case (Id(i) :: rest) if bindings.contains(i) => (rest, bindings(i)) match {
-        case (List(), Number(n)) => Number(n)
-        case (rest, Number(n)) => doMath(rest, m) match {
-          case Number(result) => m(Number(n), Number(result))
-          case error => error
-        }
-	case (List(), SExp(s)) => eval(s) match {
-	  case Number(n) => Number(n)
-	  case _ => Error("SExp did not result in a number:  " + s.toString)
-	}
-	case (rest, SExp(s)) => doMath(rest, m) match {
-	  case Number(backResult) => eval(s) match {
-	    case Number(frontResult) => m(Number(frontResult), Number(backResult))
-	  }
-	}
-	case (_, somethingElse) => Error("Binding for " + i + " is not a number:  " + somethingElse.toString)
+      case List(other) => resolveTerm(other)
+      case (other :: rest) => (resolveTerm(other), doMath(rest, m)) match {
+	case (Number(x), Number(y)) => m(Number(x), Number(y))
+	case wrong => Error("One or both not resolving to numbers:  " + t.toString)
       }
     }
   }

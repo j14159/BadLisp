@@ -1,10 +1,7 @@
 package com.noisycode
 
 trait Conditionals {
-  this: TypeHelper with Bindings =>
-
-  def eval(s: SExp): Term
-  def eval(t: List[Term]): Term
+  this: Evaluator =>
 
   val basicIfThenElse: pf = { 
     case List(Id("if"), cond, t, e) => { doIf(cond, t, e) } 
@@ -14,7 +11,7 @@ trait Conditionals {
    * Condition, Then, Else
    */
   def doIf(cond: Term, t: Term, e: Term): Term = {
-    cond match {
+    val result = cond match {
       case Bool(b) => if(b) t else e
       case Id("true") => t
       case Id("false") => e
@@ -23,5 +20,6 @@ trait Conditionals {
 	case other => Error("Condition SExp must eval to boolean:  " + s.toString)
       }
     }
+    resolveTerm(result)
   }
 }

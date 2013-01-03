@@ -4,14 +4,7 @@ package com.noisycode
  * Provides support for using "define" to create global values and functions.
  */
 trait Definitions {
-  this: TypeHelper with Bindings =>
-
-  //need eval for the global value stuff:
-  def eval(s: SExp): Term
-  def eval(t: List[Term]): Term
-
-  //need the symbol table to be able to register partial functions for function execution:
-  var symbolTable: List[pf]
+  this: Evaluator =>
 
   val constant: pf =
     {
@@ -19,13 +12,17 @@ trait Definitions {
         bindings = bindings + (id -> Number(value))
         Sym(id, Number(value))
       }
-      case List(Id("define"), Id(id), SExp(generator)) => {
-        eval(generator) match {
+      case List(Id("define"), Id(id), other) => {
+        resolveTerm(other) match {
           case Number(n) => {
             bindings = bindings + (id -> Number(n))
             Sym(id, Number(n))
           }
-          case _ => Error("SExp in define of non-function must result in a concrete value:  " + generator.toString)
+	  case Data(d) => {
+	    bindings = bindings + (id -> Data(d))
+            Sym(id, Data(d))
+	  }
+          case _ => Error("SExp in define of non-function must result in a concrete value:  " + other.toString)
         }
       }
     }
@@ -38,10 +35,7 @@ trait Definitions {
         val thisFunc: pf = {
           case (Id(fn) :: rest) if rest.length == parameters.length && fn == funcName.v => {
 	    val resolvedArgs = rest.map {
-	      p => p match {
-		case Id(id) => bindings(id)
-		case other => other
-	      }
+	      p => resolveTerm(p)
 	    }
 
 	    val totalBindings = parameters.zip(resolvedArgs).toMap ++ bindings
