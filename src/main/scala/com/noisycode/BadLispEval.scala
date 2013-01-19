@@ -17,8 +17,7 @@ trait Evaluator {
     t match {
       case v: Value => v
       case Id(id) => bindings(id) match {
-	case Number(n) => Number(n)
-	case Data(d) => Data(d)
+	case v: Value => v
 	case other => Error("Not a value binding:  " + other.toString)
       }
       case SExp(s) => eval(s) match {
@@ -30,6 +29,10 @@ trait Evaluator {
   }
 }
 
+/**
+ * Full BadLisp interpreter.  When evaluating a function, the interpreter will spawn new instances to give
+ * locally scoped function parameter bindings.
+ */
 class BadLispEval(initialBindings: Map[String, Term] = Map(), initialSymbols: List[PartialFunction[List[Term], Term]] = Nil)
   extends Evaluator
   with PredefMath 
@@ -55,14 +58,14 @@ class BadLispEval(initialBindings: Map[String, Term] = Map(), initialSymbols: Li
 	val total = symbolTable ++ bifs
 	total.filter(_.isDefinedAt(t)) match {
           case List(f) => f(t)
-          case (f :: more) => Error("Multiple definitions for " + f.toString + ", " + (f :: more).length)
+          case (f :: more) => f(t)  //always execute the most recently defined function.
           case _ => {
 	    println("Nothing defined for:  " + t.head.toString)
 	    Error("Nothing defined for:  " + t.head.toString)
 	  }
         }
       }
-      case (Number(n) :: Nil) => Number(n)
+      case List(v: Value) => v
       case (SExp(s) :: rest) => {
         println("Evaluating SExp:  " + s.toString)
         eval(s)
@@ -72,17 +75,20 @@ class BadLispEval(initialBindings: Map[String, Term] = Map(), initialSymbols: Li
   }
 }
 
+/**
+ * Predefined math functions.
+ */
 trait PredefMath {
   this: Evaluator =>
 
   val add: pf =
-    { case (Id("+") :: rest) => doMath(rest, ((a, b) => Number(a.v + b.v))) }
+    { case (Id("+") :: rest) => doMath(rest, ((a, b) => Number(a.n + b.n))) }
   val sub: pf =
-    { case (Id("-") :: rest) => doMath(rest, ((a, b) => Number(a.v - b.v))) }
+    { case (Id("-") :: rest) => doMath(rest, ((a, b) => Number(a.n - b.n))) }
   val div: pf =
-    { case (Id("/") :: rest) => doMath(rest, ((a, b) => Number(a.v / b.v))) }
+    { case (Id("/") :: rest) => doMath(rest, ((a, b) => Number(a.n / b.n))) }
   val mult: pf =
-    { case (Id("*") :: rest) => doMath(rest, ((a, b) => Number(a.v * b.v))) }
+    { case (Id("*") :: rest) => doMath(rest, ((a, b) => Number(a.n * b.n))) }
 
   def doMath(t: List[Term], m: (Number, Number) => Number): Term = {
     t match {

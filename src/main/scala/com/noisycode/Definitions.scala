@@ -14,9 +14,9 @@ trait Definitions {
       }
       case List(Id("define"), Id(id), other) => {
         resolveTerm(other) match {
-          case Number(n) => {
-            bindings = bindings + (id -> Number(n))
-            Sym(id, Number(n))
+          case v: Value => {
+            bindings = bindings + (id -> v)
+            Sym(id, v)
           }
 	  case Data(d) => {
 	    bindings = bindings + (id -> Data(d))
@@ -30,10 +30,10 @@ trait Definitions {
     {
       case List(Id("define"), SExp(params: List[Id]), SExp(body)) => {
         val funcName = params.head
-        val parameters = params.tail.map(_.v)
+        val parameters = params.tail.map(_.id)
 
         val thisFunc: pf = {
-          case (Id(fn) :: rest) if rest.length == parameters.length && fn == funcName.v => {
+          case (Id(fn) :: rest) if rest.length == parameters.length && fn == funcName.id => {
 	    val resolvedArgs = rest.map {
 	      p => resolveTerm(p)
 	    }
@@ -44,7 +44,7 @@ trait Definitions {
         }
         symbolTable = thisFunc :: symbolTable
 
-        Func(params.head.v, params.tail, SExp(body))
+        Func(params.head.id, params.tail, SExp(body))
       }
     }
 }
