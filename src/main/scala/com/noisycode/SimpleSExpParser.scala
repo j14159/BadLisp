@@ -17,6 +17,8 @@ object SExpParser extends RegexParsers {
   def sexp: Parser[SExp] = "(" ~> rep(value | id | sexp | data) <~ ")" ^^ { l => SExp(l) }
 
   def badList: Parser[ListTerm] = data | sexp
+  def program: Parser[List[SExp]] = rep(sexp)
 
-  def parseSource(expression: String) = parseAll(badList, expression)
+  def parseLine(expression: String) = parseAll(badList, expression)
+  def parseProgram(source: String) = parseAll(program, source)
 }
