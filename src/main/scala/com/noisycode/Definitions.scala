@@ -8,20 +8,16 @@ trait Definitions {
 
   val constant: pf =
     {
-      case List(Id("define"), Id(id), Number(value)) => {
-        bindings = bindings + (id -> Number(value))
-        Sym(id, Number(value))
-      }
       case List(Id("define"), Id(id), other) => {
         resolveTerm(other) match {
           case v: Value => {
-            bindings = bindings + (id -> v)
+            val resolverFunc: pf = {
+              case List(Id(id)) => v
+            }
+
+            symbolTable = resolverFunc :: symbolTable
             Sym(id, v)
           }
-	  case Data(d) => {
-	    bindings = bindings + (id -> Data(d))
-            Sym(id, Data(d))
-	  }
           case _ => Error("SExp in define of non-function must result in a concrete value:  " + other.toString)
         }
       }
@@ -34,12 +30,31 @@ trait Definitions {
 
         val thisFunc: pf = {
           case (Id(fn) :: rest) if rest.length == parameters.length && fn == funcName.id => {
-	    val resolvedArgs = rest.map {
-	      p => resolveTerm(p)
-	    }
+            val resolvedArgs = rest.map {
+              p => resolveTerm(p)
+            }
 
-	    val totalBindings = parameters.zip(resolvedArgs).toMap ++ bindings
-            new BadLispEval(totalBindings, symbolTable).eval(body)
+            val localBindings: List[pf] = parameters.zip(resolvedArgs).map {
+              tup =>
+                {
+                  val resolverFunc: pf = {
+                    case List(Id(tup._1)) => tup._2
+                  }
+                  resolverFunc
+                }
+            }
+
+            /*
+	     * This is kludgy but works, doesn't get stack overflows
+	     * on basic recursive functions like the old "new evaluator"
+	     * method did.  Probably better to have a definition of eval()
+	     * that takes symbol table arguments or something like that.
+	     */
+            val old = symbolTable
+            symbolTable = localBindings ::: symbolTable
+            val result = eval(body)
+            symbolTable = old
+            result
           }
         }
         symbolTable = thisFunc :: symbolTable

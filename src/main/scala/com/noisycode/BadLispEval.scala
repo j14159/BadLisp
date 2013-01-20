@@ -3,7 +3,6 @@ package com.noisycode
 trait Evaluator {
   type pf = PartialFunction[List[Term], Term]
   
-  var bindings: Map[String, Term] = Map()
   var symbolTable: List[PartialFunction[List[Term], Term]] = Nil
 
   def eval(t: List[Term]): Term
@@ -16,9 +15,17 @@ trait Evaluator {
   def resolveTerm(t: Term): Value = {
     t match {
       case v: Value => v
-      case Id(id) => bindings(id) match {
-	case v: Value => v
-	case other => Error("Not a value binding:  " + other.toString)
+      case Id(id) => {
+        var seed: Option[PartialFunction[List[Term], Term]] = None
+	val total = symbolTable
+	total.filter(_.isDefinedAt(List(t))) match {
+	  /*
+	   * In theory, the following could allow for cyclical definitions
+	   * but I'm not especially concerned about fixing that at present.
+	   */
+          case (f :: more) => resolveTerm(f(List(t)))  
+          case _ => Error(s"Nothing defined for $t")
+	}
       }
       case SExp(s) => eval(s) match {
 	case v: Value => v
@@ -33,7 +40,7 @@ trait Evaluator {
  * Full BadLisp interpreter.  When evaluating a function, the interpreter will spawn new instances to give
  * locally scoped function parameter bindings.
  */
-class BadLispEval(initialBindings: Map[String, Term] = Map(), initialSymbols: List[PartialFunction[List[Term], Term]] = Nil)
+class BadLispEval(initialSymbols: List[PartialFunction[List[Term], Term]] = Nil)
   extends Evaluator
   with PredefMath 
   with Definitions 
@@ -41,7 +48,6 @@ class BadLispEval(initialBindings: Map[String, Term] = Map(), initialSymbols: Li
   with Conditionals 
   with BadLists {
 
-  bindings = initialBindings
   symbolTable = initialSymbols
 
   var bifs = 
@@ -57,7 +63,6 @@ class BadLispEval(initialBindings: Map[String, Term] = Map(), initialSymbols: Li
         var seed: Option[PartialFunction[List[Term], Term]] = None
 	val total = symbolTable ++ bifs
 	total.filter(_.isDefinedAt(t)) match {
-          case List(f) => f(t)
           case (f :: more) => f(t)  //always execute the most recently defined function.
           case _ => {
 	    println("Nothing defined for:  " + t.head.toString)
@@ -66,10 +71,7 @@ class BadLispEval(initialBindings: Map[String, Term] = Map(), initialSymbols: Li
         }
       }
       case List(v: Value) => v
-      case (SExp(s) :: rest) => {
-        println("Evaluating SExp:  " + s.toString)
-        eval(s)
-      }
+      case (SExp(s) :: rest) => eval(s)
       case _ => Error("Bad input format:  " + t.toString)
     }
   }
@@ -105,4 +107,3 @@ trait PredefMath {
     }
   }
 }
-

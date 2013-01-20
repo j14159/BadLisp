@@ -36,7 +36,10 @@ class MultilineTest extends FunSpec with GivenWhenThen {
 
       when("the function call is fed in and evaluated, the result should be as expected")
       SExpParser.parseProgram(laterCall) match {
-	case SExpParser.Success(result, _) => assert(eval.eval(result) == Number(4.0))
+	case SExpParser.Success(result, _) => {
+	  println(eval.eval(result).toString)
+	  assert(eval.eval(result) == Number(4.0))
+	}
 	case _ => assert(false)
       }
     }
