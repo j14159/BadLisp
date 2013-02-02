@@ -1,0 +1,19 @@
+(define (square x) 
+	(* x x))
+
+(define (length x)
+  (if (= x '())
+    0
+    (if (= (cdr x) '())
+      1
+      (+ 1 (length (cdr x))))))
+
+(define (map list function)
+  (if (= list '())
+    '()
+    (cons (function (car list)) (map (cdr list) function))))
+
+(define (reduce list seed function) 
+  (if (= list '()) 
+      seed 
+      (reduce (cdr list) (function seed (car list)) function)))

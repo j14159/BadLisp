@@ -29,7 +29,10 @@ trait Evaluator {
       }
       case SExp(s) => eval(s) match {
 	case v: Value => v
-	case other => Error("Could not resolve SExp to number:  " + s.toString)
+	case other => {
+	  println("bad eval of sexp")
+	  Error("Could not resolve SExp to value:  " + s.toString)
+	}
       }
       case Data(d) => Data(d)
     }
@@ -50,6 +53,9 @@ class BadLispEval(initialSymbols: List[PartialFunction[List[Term], Term]] = Nil)
 
   symbolTable = initialSymbols
 
+  /**
+   * Predefined functions (Built In Functions).
+   */
   var bifs = 
     List[pf](add, sub, div, mult, 
 	     constant, function, 

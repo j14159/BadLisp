@@ -18,7 +18,7 @@ case class Data(d: List[Term]) extends Term with ListTerm with Value
 case class SExp(terms: List[Term]) extends Term with ListTerm
 
 case class Sym(id: String, value: Value) extends Term
-case class Func(id: String, params: List[Id], body: SExp) extends Term
+case class Func(id: String, params: List[Id], body: SExp) extends Value
 
 case class Error(msg: String) extends Value
 

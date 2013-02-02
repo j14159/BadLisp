@@ -6,8 +6,8 @@ trait BadLists {
   val cons: pf =
     {
       case List(Id("cons"), t: Term, backend) => resolveTerm(backend) match {
-        case n: Number => Data(List(t, n))
-        case Data(d) => Data(t :: d)
+        case n: Number => Data(List(resolveTerm(t), n))
+        case Data(d) => Data(resolveTerm(t) :: d)
 	case BadString(s) => resolveTerm(t) match {
 	  case BadChar(c) => BadString(c + s)
 	  case BadString(s2) => BadString(s2 + s)
