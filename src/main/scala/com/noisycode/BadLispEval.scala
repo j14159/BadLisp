@@ -40,8 +40,7 @@ trait Evaluator {
 }
 
 /**
- * Full BadLisp interpreter.  When evaluating a function, the interpreter will spawn new instances to give
- * locally scoped function parameter bindings.
+ * Full BadLisp interpreter.
  */
 class BadLispEval(initialSymbols: List[PartialFunction[List[Term], Term]] = Nil)
   extends Evaluator

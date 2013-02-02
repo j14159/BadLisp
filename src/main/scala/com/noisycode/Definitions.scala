@@ -31,10 +31,13 @@ trait Definitions {
         val thisFunc: pf = {
           case (Id(fn) :: rest) if rest.length == parameters.length && fn == funcName.id => {
             /*
-	     * This is kludgy but works, doesn't get stack overflows
+	     * The following symbol table backup and replacement after function
+	     * invocation is kludgy but works and doesn't get stack overflows
 	     * on basic recursive functions like the old "new evaluator"
 	     * approach did.  Probably better to have a definition of eval()
-	     * that takes symbol table arguments or something like that.
+	     * that takes symbol table arguments or something like that but
+	     * that would require a different way of handling the binding of
+	     * an existing function to a new name.
 	     */
             val old = symbolTable
 
@@ -49,6 +52,8 @@ trait Definitions {
 		resolverFunc
             }
 
+	    //essentially re-evaluate any functions passed as parameters to provide them 
+	    //under a different binding.
 	    paramsAndArgs.map {
 	      _ match {
 		case (binding, Func(originalName, p, b)) => eval(SExp(List(Id("define"), SExp(Id(binding) :: p), b)))
