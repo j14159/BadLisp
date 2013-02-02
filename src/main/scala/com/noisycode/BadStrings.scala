@@ -6,17 +6,18 @@ trait BadStrings {
 
   val strLength: pf = {
     case (List(Id("str-length"), t: Term)) => resolveTerm(t) match {
-      case List(BadString(s)) => Number(s.length)
+      case BadString(s) => Number(s.length)
       case other => Error("Can't count the string length of a non-string:  " + other.toString)
     }
   }
 
   val str: pf = {
-    case (Id("str") :: rest) => resolveTerm(eval(rest)) match {
-      case l: List[Term] => collapseList(l)
-      case Data(l) => collapseList(l)
-      case v: Value => BadString(v)
-      case other => Error(s"Could not convert $other to values")
+    case (Id("str") :: rest) => {
+      val s = rest.foldLeft(new StringBuilder)((b, n) => n match {
+	case v: Value => b.append(valueToString(v))
+	case other => b.append(valueToString(resolveTerm(other)))
+      }).toString
+      BadString(s)
     }
   }
 

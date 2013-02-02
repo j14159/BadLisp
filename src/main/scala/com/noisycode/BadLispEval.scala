@@ -49,7 +49,8 @@ class BadLispEval(initialSymbols: List[PartialFunction[List[Term], Term]] = Nil)
   with Definitions 
   with Comparisons 
   with Conditionals 
-  with BadLists {
+  with BadLists 
+  with BadStrings {
 
   symbolTable = initialSymbols
 
@@ -61,7 +62,8 @@ class BadLispEval(initialSymbols: List[PartialFunction[List[Term], Term]] = Nil)
 	     constant, function, 
 	     gt, lt, eq, 
 	     basicIfThenElse,
-	     cons, car, cdr)
+	     cons, car, cdr,
+	     str, strLength)
 
   def eval(t: List[Term]): Term = {
     t match {
