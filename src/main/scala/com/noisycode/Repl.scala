@@ -84,7 +84,7 @@ class Repl {
 	}
       }
       case (":quit" :: _) | (":exit" :: _) => System exit 0
-      case _ => println("Unknown command.")
+      case _ => println("Unknown command. Bad Human!")
     }
   }
   
